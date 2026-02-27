@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Your Route</title>
+    <script src="config.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="icon" href="icon.png" type="image/png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-image: url('background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            position: relative;
+        }
+
+        /* --- Style cho nút chuyển ngôn ngữ --- */
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .lang-btn {
+            /* Cập nhật flex để căn chỉnh icon và chữ */
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Khoảng cách giữa cờ và chữ */
+            
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Style cho icon cờ hình tròn */
+        .flag-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%; /* Bo tròn hoàn toàn */
+            object-fit: cover; /* Đảm bảo hình không bị méo */
+            border: 1px solid rgba(0,0,0,0.1); /* Viền mờ nhẹ cho cờ */
+        }
+
+        .lang-btn.active {
+            background-color: #0066cc;
+            color: white;
+            cursor: default;
+        }
+
+        .lang-btn.inactive {
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .lang-btn.inactive:hover {
+            background-color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* --- Style cũ --- */
+        .container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 42px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+            font-family: 'CottonCloud', cursive, sans-serif;
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 280px;
+        }
+
+        .login-box h2 {
+            text-align: center;
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            padding: 12px 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #999;
+        }
+
+        .btn-login {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .login-footer {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .login-footer a {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            color: #999;
+            font-size: 13px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #1f90f0 0%, #1967d2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn-google:hover {
+            background: linear-gradient(135deg, #1967d2 0%, #155bc4 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(31, 144, 240, 0.3);
+        }
+
+        .btn-google:active {
+            transform: translateY(0);
+        }
+
+        .google-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-block;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-message {
+            color: #d32f2f;
+            font-size: 13px;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 32px;
+            }
+
+            .login-box {
+                padding: 30px;
+                border-radius: 10px;
+            }
+
+            .login-box h2 {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+
+            .form-group input {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .btn-login {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .btn-google {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .lang-switch {
+                top: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="lang-switch">
+        <button class="lang-btn active">
+            <img src="https://flagcdn.com/w40/vn.png" alt="VN" class="flag-icon">
+            Tiếng Việt
+        </button>
+        <a href="indexeng.html" class="lang-btn inactive">
+            <img src="https://flagcdn.com/w40/us.png" alt="US" class="flag-icon">
+            Tiếng Anh
+        </a>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Find Your Route</h1>
+        </div>
+
+        <div id="loginFormContainer" class="login-box">
+            <h2>Đăng nhập</h2>
+
+            <div class="form-group">
+                <label for="loginEmail">Email</label>
+                <input 
+                    type="email" 
+                    id="loginEmail" 
+                    placeholder="Nhập email"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="loginPassword">Mật khẩu</label>
+                <input 
+                    type="password" 
+                    id="loginPassword" 
+                    placeholder="Nhập mật khẩu"
+                    required
+                >
+            </div>
+
+            <div id="loginError" class="error-message"></div>
+
+            <!-- [SỬA] type="button" tránh submit form -->
+            <button class="btn-login" id="loginBtn" type="button">Đăng nhập</button>
+
+            <div class="login-footer">
+                Chưa có tài khoản? <a id="showRegisterLink">Đăng ký</a>
+            </div>
+
+            <div class="divider">hoặc</div>
+
+            <button class="btn-google" id="googleBtn" type="button">
+                <svg class="google-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Đăng nhập bằng Google
+            </button>
+        </div>
+
+        <div id="registerFormContainer" class="login-box hidden">
+            <h2>Đăng ký</h2>
+
+            <div class="form-group">
+                <label for="registerEmail">Email</label>
+                <input 
+                    type="email" 
+                    id="registerEmail" 
+                    placeholder="Nhập email"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="registerPassword">Mật khẩu</label>
+                <input 
+                    type="password" 
+                    id="registerPassword" 
+                    placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="registerPasswordConfirm">Xác nhận mật khẩu</label>
+                <input 
+                    type="password" 
+                    id="registerPasswordConfirm" 
+                    placeholder="Xác nhận mật khẩu"
+                    required
+                >
+            </div>
+
+            <div id="registerError" class="error-message"></div>
+
+            <!-- [SỬA] Thêm type="button" để tránh nút bị coi là submit và gây reload trang -->
+            <button class="btn-login" id="registerBtn" type="button">Đăng ký</button>
+
+            <div class="login-footer">
+                Đã có tài khoản? <a id="showLoginLink">Đăng nhập</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // [ADDED] Base URL API backend (config.js: local / production)
+        const API_BASE = window.API_BASE || 'http://localhost:3000';
+
+        // ===== Quản lý form =====
+        const loginFormContainer = document.getElementById('loginFormContainer');
+        const registerFormContainer = document.getElementById('registerFormContainer');
+        const showRegisterLink = document.getElementById('showRegisterLink');
+        const showLoginLink = document.getElementById('showLoginLink');
+
+        // Chuyển sang form đăng ký
+        showRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginFormContainer.classList.add('hidden');
+            registerFormContainer.classList.remove('hidden');
+            clearErrors();
+        });
+
+        // Chuyển sang form đăng nhập
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            registerFormContainer.classList.add('hidden');
+            loginFormContainer.classList.remove('hidden');
+            clearErrors();
+        });
+
+        // ===== Đăng ký (API - report FR1) =====
+        const registerBtn = document.getElementById('registerBtn');
+        const registerEmail = document.getElementById('registerEmail');
+        const registerPassword = document.getElementById('registerPassword');
+        const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+        const registerError = document.getElementById('registerError');
+
+        registerBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            registerError.textContent = '';
+
+            const email = registerEmail.value.trim();
+            const password = registerPassword.value;
+            const confirmPassword = registerPasswordConfirm.value;
+
+            if (!email) { registerError.textContent = 'Vui lòng nhập email'; return; }
+            if (!isValidEmail(email)) { registerError.textContent = 'Email không hợp lệ'; return; }
+            if (!password || password.length < 6) { registerError.textContent = 'Mật khẩu phải có tối thiểu 6 ký tự'; return; }
+            if (password !== confirmPassword) { registerError.textContent = 'Mật khẩu xác nhận không khớp'; return; }
+
+            try {
+                const res = await fetch(API_BASE + '/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                // [SỬA] Parse phản hồi an toàn: server có thể trả HTML (404/500) thay vì JSON, tránh res.json() gây lỗi
+                const text = await res.text();
+                let data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch (_) {
+                    data = { error: (text && text.length < 200) ? text : 'Máy chủ trả về phản hồi không hợp lệ. Kiểm tra backend tại ' + API_BASE };
+                }
+                if (!res.ok) { registerError.textContent = data.error || 'Đăng ký thất bại'; return; }
+                alert('Đăng ký thành công! Bây giờ bạn có thể đăng nhập.');
+                registerFormContainer.classList.add('hidden');
+                loginFormContainer.classList.remove('hidden');
+                registerEmail.value = ''; registerPassword.value = ''; registerPasswordConfirm.value = '';
+            } catch (err) {
+                registerError.textContent = 'Lỗi kết nối: ' + (err.message || 'Kiểm tra backend tại ' + API_BASE + '. Đảm bảo server Node đang chạy và CORS cho phép.');
+            }
+        });
+
+        // ===== Đăng nhập (API + JWT - report FR1) =====
+        const loginBtn = document.getElementById('loginBtn');
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginError = document.getElementById('loginError');
+
+        loginBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            loginError.textContent = '';
+
+            const email = loginEmail.value.trim();
+            const password = loginPassword.value;
+
+            if (!email || !password) { loginError.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+
+            try {
+                const res = await fetch(API_BASE + '/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                // [SỬA] Parse phản hồi an toàn (giống đăng ký)
+                const text = await res.text();
+                let data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { error: 'Phản hồi không hợp lệ' }; }
+                if (!res.ok) { loginError.textContent = data.error || 'Đăng nhập thất bại'; return; }
+                // [ADDED] Lưu token và user để gửi Authorization (report NFR3)
+                localStorage.setItem('loggedInUser', JSON.stringify({ email: data.user.email, token: data.token, id: data.user.id }));
+                window.location.href = 'homepage.html';
+            } catch (err) {
+                loginError.textContent = 'Lỗi kết nối: ' + (err.message || 'Kiểm tra backend tại ' + API_BASE);
+            }
+        });
+
+        // ===== Google Sign-In =====
+        const googleBtn = document.getElementById('googleBtn');
+        
+        googleBtn.addEventListener('click', () => {
+            // Khởi tạo Google Sign-In
+            google.accounts.id.initialize({
+                client_id: '237944033542-mqv0k2sdvfcpo5lm543kor28nkchiu2t.apps.googleusercontent.com',
+                callback: handleGoogleSignIn
+            });
+            
+            // Render nút và click tự động
+            google.accounts.id.renderButton(
+                document.createElement('div'),
+                { theme: 'outline', size: 'large' }
+            );
+            
+            // Gọi prompt
+            google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    // Nếu prompt không hiển thị, gọi signIn trực tiếp.
+                    // Dùng origin + '/' để redirect_uri cố định — phải thêm ĐÚNG URI này vào Google Cloud Console (Authorized redirect URIs).
+                    var redirectUri = (window.location.origin || 'http://localhost:3000') + '/';
+                    if (window.location.origin === 'null' || !window.location.origin) redirectUri = 'http://localhost:3000/';
+                    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=237944033542-mqv0k2sdvfcpo5lm543kor28nkchiu2t.apps.googleusercontent.com&redirect_uri=' + encodeURIComponent(redirectUri) + '&response_type=code&scope=email%20profile';
+                }
+            });
+        });
+
+        function handleGoogleSignIn(response) {
+            const token = response.credential;
+            
+            // Decode JWT token để lấy thông tin user
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+
+            const userInfo = JSON.parse(jsonPayload);
+            
+            // Lưu user đăng nhập Google
+            localStorage.setItem('loggedInUser', JSON.stringify({
+                email: userInfo.email,
+                name: userInfo.name,
+                picture: userInfo.picture,
+                isGoogle: true
+            }));
+
+            // Chuyển sang homepage
+            window.location.href = 'homepage.html';
+        }
+
+        // ===== Hàm hỗ trợ =====
+        function isValidEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function clearErrors() {
+            loginError.textContent = '';
+            registerError.textContent = '';
+        }
+    </script>
+</body>
+</html>

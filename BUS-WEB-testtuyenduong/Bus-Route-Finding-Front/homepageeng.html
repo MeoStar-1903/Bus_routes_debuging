@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Your Route</title>
+  <script src="config.js"></script>
+  <link rel="icon" href="icon.png" type="image/png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* --- RESET & GENERAL LAYOUT --- */
+    * { box-sizing: border-box; }
+    body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+
+    #app-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      position: relative; /* For absolute positioning of lang switch */
+    }
+
+    /* --- LANGUAGE SWITCHER (UPDATED) --- */
+    .lang-switch {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        z-index: 2000; /* Higher than map controls */
+    }
+
+    .lang-btn {
+        /* Flexbox for flag alignment */
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        border: none;
+        cursor: pointer;
+    }
+
+    /* Flag Icon Style */
+    .flag-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .lang-btn.active {
+        background-color: #0066cc;
+        color: white;
+        cursor: default;
+    }
+
+    .lang-btn.inactive {
+        background-color: rgba(255, 255, 255, 0.9);
+        color: #333;
+    }
+
+    .lang-btn.inactive:hover {
+        background-color: #fff;
+        transform: translateY(-2px);
+    }
+
+    /* --- SIDEBAR (Left) --- */
+    .sidebar {
+      width: 380px;
+      background-color: #ffffff;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #e0e0e0;
+      flex-shrink: 0;
+      z-index: 1000;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    }
+
+    /* HEADER */
+    .sidebar-header {
+      background-color: #5DADE2; 
+      padding: 10px 15px;
+      color: white;
+    }
+
+    .brand { font-size: 20px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    
+    .tabs { display: flex; gap: 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .tab { padding-bottom: 5px; opacity: 0.8; }
+    .tab.active { opacity: 1; border-bottom: 2px solid white; }
+
+    /* --- SEARCH BAR --- */
+    .search-box-container {
+      padding: 15px;
+      background-color: #ffffff;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      background-color: #f0f2f5;
+      color: #333;
+      outline: none;
+      transition: all 0.3s;
+    }
+    .search-input:focus { 
+      background-color: #fff;
+      border-color: #5DADE2; 
+      box-shadow: 0 0 0 2px rgba(93, 173, 226, 0.2);
+    }
+
+    /* --- ROUTE LIST --- */
+    .route-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      background-color: #ffffff;
+    }
+
+    .route-item {
+      display: flex;
+      padding: 15px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .route-item:hover { background-color: #f5f9ff; }
+
+    .route-icon {
+      font-size: 24px;
+      margin-right: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+    }
+    .route-info { flex: 1; }
+    .route-name { font-weight: bold; color: #008037; font-size: 15px; margin-bottom: 4px; }
+    
+    .route-desc { 
+      font-size: 13px; 
+      color: #555; 
+      margin-bottom: 4px; 
+    }
+    
+    .route-meta { 
+      font-size: 12px; 
+      color: #888;
+      display: flex; 
+      justify-content: space-between; 
+    }
+
+    /* --- FOOTER --- */
+    .sidebar-footer {
+      padding: 15px;
+      border-top: 1px solid #e0e0e0;
+      background-color: #ffffff;
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    
+    .btn-find { background-color: #00b14f; color: white; }
+    .btn-find:disabled { background-color: #e0e0e0; color: #999; cursor: not-allowed; } 
+    .btn-logout { background-color: #dc3545; color: white; }
+
+    /* --- MAP CONTAINER (Right) --- */
+    .map-container {
+      flex: 1;
+      position: relative;
+    }
+    #map { width: 100%; height: 100%; }
+
+    .leaflet-control-geocoder-form input { color: #000000; }
+    
+    /* --- SCROLLBAR --- */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #fff; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+  </style>
+</head>
+
+<body>
+
+  <div id="app-container">
+    <div class="lang-switch">
+        <a href="homepage.html" class="lang-btn inactive">
+            <img src="https://flagcdn.com/w40/vn.png" alt="VN" class="flag-icon">
+            Tiếng Việt
+        </a>
+        <button class="lang-btn active">
+            <img src="https://flagcdn.com/w40/us.png" alt="US" class="flag-icon">
+            English
+        </button>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><i class="fa-solid fa-bus"></i>Find Your Bus</div>
+        <div class="tabs">
+          <div class="tab active"><i class="fa-solid fa-magnifying-glass"></i> LOOKUP</div>
+          <div class="tab"><i class="fa-solid fa-map-location-dot"></i> DIRECTIONS</div>
+        </div>
+      </div>
+
+      <div class="search-box-container">
+        <input type="text" id="route-search" class="search-input" placeholder="Search routes (e.g., 01, 2A)...">
+      </div>
+
+      <ul class="route-list" id="route-list">
+        </ul>
+
+      <div id="route-result-panel"></div>
+
+      <div class="sidebar-footer">
+        <button id="find-route-btn" class="btn btn-find" disabled>Find Route (A-B)</button>
+        <button id="clear-route-btn" class="btn" style="background:#6c757d;color:white;">Clear</button>
+        <button id="logout-btn" class="btn btn-logout">Logout</button>
+      </div>
+    </aside>
+
+    <main class="map-container">
+      <div id="map"></div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script>window.API_BASE = window.API_BASE || 'http://localhost:3000';</script>
+  <script src="js/api.js"></script>
+  <script src="js/mapService.js"></script>
+
+  <script>
+    function getToken() {
+      const user = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+      return user.token || null;
+    }
+    const routesData = [
+      { id: '2A', type: 'metro', name: 'Metro Line 2A', desc: 'Cat Linh - Ha Dong', time: '05:00 - 23:00', price: '30,000 VND' },
+      { id: '3', type: 'metro', name: 'Metro Line 3', desc: 'Nhon - Hanoi Station', time: '05:00 - 23:00', price: '24,000 VND' },
+      { id: '01', type: 'bus', name: 'Bus Route 01', desc: 'Gia Lam Station - Yen Nghia Station', time: '05:00 - 21:00', price: '7,000 VND' },
+      { id: '02', type: 'bus', name: 'Bus Route 02', desc: 'Bac Co - Yen Nghia Station', time: '05:05 - 21:05', price: '7,000 VND' },
+      { id: '04', type: 'bus', name: 'Bus Route 04', desc: 'Long Bien - Nat. Endo. Hospital', time: '05:00 - 21:00', price: '7,000 VND' },
+      { id: '05', type: 'bus', name: 'Bus Route 05', desc: 'Linh Dam - Phu Dien', time: '05:00 - 21:05', price: '7,000 VND' }
+    ];
+    const routeListEl = document.getElementById('route-list');
+    const searchInput = document.getElementById('route-search');
+
+    function renderRoutes(routes) {
+      routeListEl.innerHTML = '';
+      routes.forEach(route => {
+        const iconClass = route.type === 'metro' ? 'fa-train-subway' : 'fa-bus';
+        const colorClass = route.type === 'metro' ? '#00b14f' : '#3498db';
+        const li = document.createElement('li');
+        li.className = 'route-item';
+        li.innerHTML = `
+          <div class="route-icon" style="color: ${colorClass}"><i class="fa-solid ${iconClass}"></i></div>
+          <div class="route-info">
+            <div class="route-name">${route.name}</div>
+            <div class="route-desc">${route.desc}</div>
+            <div class="route-meta"><span><i class="fa-regular fa-clock"></i> ${route.time}</span><span>${route.price}</span></div>
+          </div>
+        `;
+        li.addEventListener('click', () => alert(`You selected: ${route.name}`));
+        routeListEl.appendChild(li);
+      });
+    }
+    renderRoutes(routesData);
+    searchInput.addEventListener('input', (e) => {
+      const keyword = e.target.value.toLowerCase();
+      renderRoutes(routesData.filter(r => r.name.toLowerCase().includes(keyword) || r.id.toLowerCase().includes(keyword)));
+    });
+
+    const map = window.BusMapService.initMap('map', { center: [21.0278, 105.8342], zoom: 13 });
+    const stopsLayer = L.layerGroup().addTo(map);
+    let busRouteLayer = null;
+
+    L.Control.geocoder({ defaultMarkGeocode: false, placeholder: 'Search location...', position: 'topleft' })
+      .on('markgeocode', function (e) {
+        const latlng = e.geocode.center;
+        map.setView(latlng, 15);
+        handleMapClick({ latlng: latlng, name: e.geocode.name });
+      }).addTo(map);
+
+    function refreshStopsInView() {
+      if (window.BusMapService && window.BusMapService.loadAndShowStopsInView)
+        window.BusMapService.loadAndShowStopsInView(map, stopsLayer);
+    }
+    refreshStopsInView();
+    map.on('moveend', refreshStopsInView);
+
+    let markerA = null, markerB = null;
+    let markerAStopId = null, markerBStopId = null;
+
+    function clearRoute() {
+      if (markerA) { map.removeLayer(markerA); markerA = null; }
+      if (markerB) { map.removeLayer(markerB); markerB = null; }
+      if (busRouteLayer) { map.removeLayer(busRouteLayer); busRouteLayer = null; }
+      markerAStopId = null;
+      markerBStopId = null;
+      document.getElementById('find-route-btn').disabled = true;
+      const panel = document.getElementById('route-result-panel');
+      if (panel) panel.innerHTML = '';
+    }
+
+    function onNearestStopResolved(marker, data, label, nameFallback) {
+      if (!data) return;
+      if (marker === markerA) markerAStopId = data.stopId;
+      if (marker === markerB) markerBStopId = data.stopId;
+      if (window.BusMapService && window.BusMapService.snapMarkerToStop)
+        window.BusMapService.snapMarkerToStop(marker, { lat: data.lat, lon: data.lon });
+      marker.setPopupContent('<b>' + label + '</b><br>' + (data.name || nameFallback));
+    }
+
+    async function handleMapClick(e) {
+      const latlng = e.latlng;
+      const name = e.name || 'Selected Location';
+      if (!markerA) {
+        markerA = L.marker(latlng, { draggable: true }).addTo(map)
+          .bindPopup('<b>Start (A)</b><br>' + name + '<br><small>Finding nearest stop...</small>').openPopup();
+        const data = await (window.BusAPI && window.BusAPI.getNearestStop ? window.BusAPI.getNearestStop(latlng.lat, latlng.lng) : Promise.resolve(null));
+        onNearestStopResolved(markerA, data, 'Start (A)', name);
+        markerA.on('dragend', async function () {
+          const latlng2 = markerA.getLatLng();
+          const data2 = await (window.BusAPI && window.BusAPI.getNearestStop ? window.BusAPI.getNearestStop(latlng2.lat, latlng2.lng) : Promise.resolve(null));
+          onNearestStopResolved(markerA, data2, 'Start (A)', 'Selected location');
+        });
+      } else if (!markerB) {
+        markerB = L.marker(latlng, { draggable: true }).addTo(map)
+          .bindPopup('<b>End (B)</b><br>' + name + '<br><small>Finding nearest stop...</small>').openPopup();
+        document.getElementById('find-route-btn').disabled = false;
+        const data = await (window.BusAPI && window.BusAPI.getNearestStop ? window.BusAPI.getNearestStop(latlng.lat, latlng.lng) : Promise.resolve(null));
+        onNearestStopResolved(markerB, data, 'End (B)', name);
+        markerB.on('dragend', async function () {
+          const latlng2 = markerB.getLatLng();
+          const data2 = await (window.BusAPI && window.BusAPI.getNearestStop ? window.BusAPI.getNearestStop(latlng2.lat, latlng2.lng) : Promise.resolve(null));
+          onNearestStopResolved(markerB, data2, 'End (B)', 'Selected location');
+        });
+      } else {
+        map.removeLayer(markerA); map.removeLayer(markerB);
+        if (busRouteLayer) { map.removeLayer(busRouteLayer); busRouteLayer = null; }
+        markerA = null; markerB = null; markerAStopId = null; markerBStopId = null;
+        document.getElementById('find-route-btn').disabled = true;
+        if (document.getElementById('route-result-panel')) document.getElementById('route-result-panel').innerHTML = '';
+        markerA = L.marker(latlng, { draggable: true }).addTo(map).bindPopup('<b>Start (A)</b><br>' + name).openPopup();
+        const data = await (window.BusAPI && window.BusAPI.getNearestStop ? window.BusAPI.getNearestStop(latlng.lat, latlng.lng) : Promise.resolve(null));
+        onNearestStopResolved(markerA, data, 'Start (A)', name);
+        markerA.on('dragend', async function () {
+          const latlng2 = markerA.getLatLng();
+          const data2 = await (window.BusAPI && window.BusAPI.getNearestStop ? window.BusAPI.getNearestStop(latlng2.lat, latlng2.lng) : Promise.resolve(null));
+          onNearestStopResolved(markerA, data2, 'Start (A)', 'Selected location');
+        });
+      }
+    }
+    map.on('click', handleMapClick);
+
+    document.getElementById('find-route-btn').addEventListener('click', async () => {
+      if (!markerA || !markerB) return;
+      const originId = markerAStopId || null;
+      const destId = markerBStopId || null;
+      if (!originId || !destId) {
+        alert('No bus stop found near the selected point. Please choose a point closer to a stop.');
+        return;
+      }
+      try {
+        const data = await (window.BusAPI && window.BusAPI.searchRoutes ? window.BusAPI.searchRoutes(originId, destId, 'fastest', getToken()) : Promise.reject(new Error('API not loaded')));
+        if (!data.routes || data.routes.length === 0) {
+          alert('No bus route found between these points.');
+          return;
+        }
+        const route = data.routes[0];
+        if (!busRouteLayer) { busRouteLayer = L.layerGroup(); busRouteLayer.addTo(map); }
+        const leafletLatLngs = await (window.BusMapService && window.BusMapService.drawRouteWithRoadNetwork
+          ? window.BusMapService.drawRouteWithRoadNetwork(route, map, busRouteLayer, { color: 'blue', weight: 5 })
+          : Promise.resolve([]));
+        if (leafletLatLngs && leafletLatLngs.length >= 2) map.fitBounds(L.latLngBounds(leafletLatLngs), { padding: [50, 50] });
+        let html = '<div style="margin-top:10px;padding:10px;background:#f5f9ff;border-radius:8px;font-size:13px;">';
+        html += '<strong>Result:</strong> ' + (route.transfers || 0) + ' transfer(s), ~' + (route.time || 0) + ' min<br>';
+        (route.steps || []).forEach((s, i) => { html += '<br>Step ' + (i + 1) + ': Route ' + (s.routeId || '') + ' (' + (s.stopCount || 0) + ' stops)'; });
+        html += '</div>';
+        const panel = document.getElementById('route-result-panel');
+        if (panel) panel.innerHTML = html;
+      } catch (err) {
+        alert(err.message || 'Server error. Check backend.');
+      }
+    });
+
+    document.getElementById('clear-route-btn').addEventListener('click', clearRoute);
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem('loggedInUser');
+      window.location.href = 'indexeng.html';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "bus-route-finding",
+  "version": "1.0.0",
+  "description": "Bus route finding website - Hanoi",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --max-old-space-size=4096 src/index.js",
+    "dev": "node --max-old-space-size=4096 src/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3"
+  }
+}

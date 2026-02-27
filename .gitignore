@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs & cache
+npm-debug.log*
+*.log
+.npm
+.cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Optional: bỏ comment dòng dưới nếu không muốn đẩy dữ liệu GTFS lên Git (Dataset thường nặng)
+# Dataset/
