@@ -13,6 +13,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-busdb}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Chạy schema.sql lần đầu khi container khởi tạo (tạo bảng gtfs + public)
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     ports:
       - "5432:5432"
     healthcheck:

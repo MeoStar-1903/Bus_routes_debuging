@@ -197,3 +197,16 @@ OSRM_ROUTE_URL=https://your-osrm-server
 ---
 
 Tài liệu dùng cho **tạo mới database từ đầu**. Chi tiết bảng/view xem **database/README.md**.
+
+---
+
+## 12. Chạy với Docker
+
+Khi dùng **Docker Compose**, schema đã được áp dụng tự động lần đầu (file `schema.sql` mount vào Postgres init). Sau khi `docker compose up -d`, chạy import **trong container app**:
+
+```bash
+docker compose exec app node database/import-gtfs.js
+docker compose exec app node database/run-post-import.js
+```
+
+Snap bến và sinh shapes (nếu cần) chạy tương tự: `docker compose exec app node database/snap-stops-to-road.js` và `docker compose exec app node database/generate-shapes-from-osrm.js`. Xem **DOCKER-DEPLOY.md** để cấu hình `.env` và các bước đầy đủ.

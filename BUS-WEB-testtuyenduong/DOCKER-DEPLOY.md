@@ -118,7 +118,7 @@ docker run -p 3000:3000 -e PORT=3000 -e DB_HOST=host.docker.internal -e DB_USER=
 ### Bước 4: Kiểm tra
 
 - Mở trình duyệt: **http://localhost:3000**
-- App sẽ tự tạo bảng (users, ratings, route_search_history) khi kết nối DB thành công. Nếu DB sai/sai mật khẩu, app vẫn chạy nhưng auth/lịch sử/đánh giá có thể không hoạt động; tìm đường vẫn dùng được (dữ liệu từ Dataset trong image).
+- App sẽ tự tạo bảng (users, ratings, route_search_history) khi kết nối DB thành công. Để **tìm đường** hoạt động, DB cần có schema GTFS (schema.sql) và dữ liệu đã import (chạy `import-gtfs.js` và `run-post-import.js` — khi dùng Docker Compose xem mục 3 bước 3).
 
 ### Chạy nền (detach)
 
@@ -165,7 +165,21 @@ docker compose up -d --build
 
 Lần đầu sẽ build image và tạo container PostgreSQL + app. App sẽ listen cổng **3000**.
 
-### Bước 3: Kiểm tra
+### Bước 3: Khởi tạo dữ liệu GTFS (chỉ làm **một lần** sau khi DB mới)
+
+Khi chạy Docker Compose lần đầu, Postgres đã tự chạy **schema.sql** (tạo bảng). Để có dữ liệu tuyến xe, bến, lịch chạy (tìm đường), cần chạy import **trong container app**:
+
+```bash
+# 1. Import dữ liệu GTFS từ Dataset vào DB
+docker compose exec app node database/import-gtfs.js
+
+# 2. Gộp bến, tạo đồ thị, transfers mặc định, views
+docker compose exec app node database/run-post-import.js
+```
+
+*(Tùy chọn: nếu cần bến snap lên đường và hình tuyến trên bản đồ, cấu hình OSRM rồi chạy `node database/snap-stops-to-road.js` và `node database/generate-shapes-from-osrm.js` — xem `database/HUONG-DAN-TAO-DB.md`.)*
+
+### Bước 4: Kiểm tra
 
 - Trình duyệt: **http://localhost:3000**
 - Xem log app: `docker compose logs -f app`

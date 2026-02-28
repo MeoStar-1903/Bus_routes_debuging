@@ -11,6 +11,8 @@ COPY Bus-Route-Finding-Front/ ./
 RUN rm -rf node_modules .env 2>/dev/null; true
 
 COPY Dataset ./Dataset
+# Copy thư mục database để có thể chạy import GTFS trong container (sau khi docker compose up)
+COPY database ./database
 
 RUN npm ci --omit=dev
 
